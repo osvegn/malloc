@@ -15,10 +15,10 @@ CC		=	gcc
 
 RM		=	rm -rf
 
-CFLAGS	=	-fPIC
+CFLAGS	=	-fPIC -I include
 
 $(NAME):	$(OBJECT)
-	$(CC) -o $(NAME) $(OBJECT) -shared
+	$(CC) -o $(NAME) $(OBJECT) $(CFLAGS) -shared
 
 all:	$(NAME)
 
