@@ -11,33 +11,122 @@
 
 static block_t *first = NULL;
 
-/* void *realloc(void *ptr, size_t size)
+size_t size_needed(size_t size)
 {
-    char *nptr = malloc(size);
-    char *tmp = ptr;
+    size_t tmp = 0;
 
-    if (!nptr)
-        return (NULL);
-    for (int i = 0; tmp[i] && i < size; i++) {
-        nptr[i] = tmp[i];
-    }
-    free(ptr);
-    return (nptr);
+    while (tmp < size + sizeof(block_t) * 2)
+        tmp += getpagesize() * 2;
+    return (tmp);
 }
 
-void *calloc(size_t nmemb, size_t size)
+block_t *go_last_pointer(void)
 {
-    write(1, "calloc\n", 7);
-    char *ptr = malloc(nmemb * size);
+    block_t *tmp = first;
 
-    if (!ptr)
+    while (tmp->next)
+        tmp = tmp->next;
+    return (tmp);
+}
+
+block_t *setup_free_part_of_block(size_t page_size, block_t *block)
+{
+    block_t *next;
+
+    next = block->allocated + block->size;
+    next->free = true;
+    next->next = NULL;
+    next->prev = block;
+    next->size = page_size - block->size - sizeof(block_t) * 2;
+    next->allocated = next + sizeof(block_t);
+    block->next = next;
+    return (block);
+}
+
+block_t *first_block(size_t size)
+{
+    size_t total_size = size_needed(size);
+    block_t *block = sbrk(total_size);
+
+    if ((void *)block == (void*)-1)
         return (NULL);
-    for (size_t i = 0; i < nmemb * size; i++) {
-        ptr[i] = '\0';
+    block->allocated = block + sizeof(block_t);
+    block->free = false;
+    block->prev = NULL;
+    block->size = size;
+    block->next = NULL;
+    if (size != total_size) {
+        block = setup_free_part_of_block(total_size, block);
     }
-    write(1, "end\n", 4);
-    return (ptr);
-}*/
+    first = block;
+    return (block);
+}
+
+block_t *new_block(size_t size)
+{
+    size_t total_size = size_needed(size);
+    block_t *block = sbrk(total_size);
+    block_t *tmp = go_last_pointer();
+
+    if ((void *)block == (void*)-1)
+        return (NULL);
+    tmp->next = block;
+    block->allocated = block + sizeof(block_t);
+    block->free = false;
+    block->prev = tmp;
+    block->size = size;
+    block->next = NULL;
+    if (size != total_size)
+        block = setup_free_part_of_block(total_size, block);
+    return (block);
+}
+
+block_t *is_better_space(block_t *block, block_t *better_block)
+{
+    if (!better_block)
+        better_block = block;
+    else if (better_block->size > block->size)
+        better_block = block;
+    return (better_block);
+}
+
+block_t *setup_available_space(block_t *block, size_t size)
+{
+    block_t *next;
+    
+    next = block->allocated + size;
+    next->allocated = next + sizeof(block_t);
+    next->free = true;
+    next->next = block->next;
+    next->prev = block;
+    next->size = block->size - size - sizeof(block_t);
+    block->next = next;
+    block->size = size;
+    block->free = false;
+    return (block);
+}
+
+block_t *find_available_space(size_t size)
+{
+    block_t *tmp = first;
+    block_t *better_block = NULL;
+
+    while (tmp->next) {
+        if (tmp->free == true && tmp->size == size) {
+            tmp->free = false;
+            return (tmp);
+        }
+        if (tmp->free == true && tmp->size - sizeof(block_t) > size) {
+            //better_block = is_better_space(tmp, better_block);
+        }
+        tmp = tmp->next;
+    }
+    if (better_block != NULL) {
+        better_block = setup_available_space(better_block, size);
+        return (better_block);
+    }
+    return (NULL);
+}
 
 void free(void *ptr)
 {
@@ -50,73 +139,33 @@ void free(void *ptr)
     }
 }
 
-size_t page_needed(size_t size)
+void *calloc(size_t nmemb, size_t size)
 {
-    size_t tmp = 0;
+    char *ptr = malloc(nmemb * size);
 
-    while (tmp < size)
-        tmp += getpagesize() * 2;
-    return (tmp);
-}
-
-block_t *first_block(size_t size)
-{
-    size_t page_size = page_needed(size);
-    block_t *block = sbrk(page_size);
-    block_t *next;
-
-    if ((void *)block == (void*)-1)
+    if (!ptr)
         return (NULL);
-    block->allocated = block + sizeof(block_t);
-    block->free = false;
-    block->prev = NULL;
-    block->size = size;
-    /* if (size != getpagesize()) {
-        write(1, "a\n", 2);
-        block->next = next;
-        next->free = true;
-        next->next = NULL;
-        next->prev = block;
-        next->size = page_size - sizeof(block_t) * 2 - size;
-        next->allocated = block->allocated + block->size + sizeof(block_t);
-        write(1, "a\n", 2);
-    } else {
-        block->next = NULL;
-    } */
-    block->next = NULL;
-    first = block;
-    return (block);
+    for (size_t i = 0; i < nmemb * size; i++) {
+        ptr[i] = '\0';
+    }
+    return (ptr);
 }
 
-block_t *new_block(size_t size)
+void draw_memory()
 {
-    size_t page_size = page_needed(size);
-    block_t *block = sbrk(page_size);
     block_t *tmp = first;
-    block_t *next;
+    int i = 1;
 
-    while (tmp->next)
+    while (tmp) {
+        printf("%i : %i bytes", i, tmp->size);
+        if (tmp->free)
+            printf(" free\n", i);
+        else
+            printf(" used\n");
+        i++;
         tmp = tmp->next;
-    if ((void *)block == (void*)-1)
-        return (NULL);
-    tmp->next = block;
-    block->allocated = block + sizeof(block_t);
-    block->free = false;
-    block->prev = tmp;
-    block->size = size;
-    /* if (size != getpagesize()) {
-        write(1, "b\n", 2);
-        block->next = next;
-        next->free = true;
-        next->next = NULL;
-        next->prev = block;
-        next->size = page_size - sizeof(block_t) * 2 - size;
-        next->allocated = block->allocated + block->size + sizeof(block_t);
-    } else {
-        block->next = NULL;
-    } */
-    block->next = NULL;
-    return (block);
+    }
+    write(1, "\n", 1);
 }
 
 void *malloc(size_t size)
@@ -129,8 +178,11 @@ void *malloc(size_t size)
             return (NULL);
         return (block->allocated);
     }
-    block = new_block(size);
-    if (!block)
-        return (NULL);
+    block = find_available_space(size);
+    if (!block) {
+        block = new_block(size);
+        if (!block)
+            return (NULL);
+    }
     return (block->allocated);
 }
