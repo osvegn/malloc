@@ -35,9 +35,11 @@ block_t *get_end_block(void)
 block_t *set_free_block(block_t *block, size_t real_size)
 {
     block_t *next;
+    void *ptr;
 
     next = block->allocated + block->size;
-    next->allocated = next + sizeof(block_t);
+    ptr = next;
+    next->allocated = ptr + sizeof(block_t);
     next->size = real_size - block->size - sizeof(block_t) * 2;
     next->next = block->next;
     next->prev = block;
@@ -58,15 +60,20 @@ block_t *find_free_space(size_t size)
             return (tmp);
         }
         if (tmp->free == true && tmp->size > size + sizeof(block_t)) {
-            tmp->free = false;
-            return (tmp);
-            // if (!block) {
-            //     block = tmp;
-            // } else if (block && block->size > tmp->size) {
-            //     block = tmp;
-            // }
+            if (!block) {
+                block = tmp;
+            } else if (block && block->size > tmp->size) {
+                block = tmp;
+            }
         }
         tmp = tmp->next;
+    }
+    if (block) {
+        real_size = block->size + sizeof(block_t);
+        block->free = false;
+        block->size = size;
+        block->next = set_free_block(block, real_size);
+        return (block);
     }
     return (NULL);
 }
@@ -75,10 +82,11 @@ block_t *create_first_block(size_t size)
 {
     size_t real_size = size_to_get(size);
     block_t *block = sbrk(real_size);
+    void *ptr = block;
 
     if ((void *)block == (void *)-1)
         return (NULL);
-    block->allocated = block + sizeof(block_t);
+    block->allocated = ptr + sizeof(block_t);
     block->free = false;
     block->prev = NULL;
     block->size = size;
@@ -91,10 +99,11 @@ block_t *create_new_block(size_t size)
 {
     size_t real_size = size_to_get(size);
     block_t *block = sbrk(real_size);
+    void *ptr = block;
 
     if ((void *)block == (void *)-1)
         return (NULL);
-    block->allocated = block + sizeof(block_t);
+    block->allocated = ptr + sizeof(block_t);
     block->free = false;
     block->prev = get_end_block();
     get_end_block()->next = block;
@@ -108,25 +117,29 @@ void draw_memory()
     block_t *tmp = first;
     size_t i = 0;
 
+    /*
+    my_putstr(1, "Print Memory :\n");
     while (tmp) {
+        my_putstr(1, "\t");
         my_putnbr(1, i);
-        write(1, " : ", 3);
+        my_putstr(1, " -> position block : ");
+        my_putnbr(1, tmp);
+        my_putstr(1, ", position memory : ");
+        my_putnbr(1, tmp->allocated);
+        my_putstr(1, " -> difference : ");
+        my_putnbr(1, tmp->allocated - (void *)tmp);
+        my_putstr(1, " | size : ");
         my_putnbr(1, tmp->size);
-        write(1, " bytes ", 8);
         if (tmp->free) {
-            write(1, "free\n", 5);
+            my_putstr(1, " free\n");
         } else {
-            write(1, "used\n", 5);
+            my_putstr(1, " used\n");
         }
-        // write(1, "->", 2);
-        // my_putnbr(1, tmp);
-        // write(1, "\n->", 3);
-        // my_putnbr(1, tmp->allocated);
-        // write(1, "\n", 1);
         tmp = tmp->next;
         i++;
     }
     write(1, "\n", 1);
+    */
 }
 
 void *malloc(size_t size)
@@ -144,6 +157,7 @@ void *malloc(size_t size)
         if (!block)
             return (NULL);
     }
+    draw_memory();
     return (block->allocated);
 }
 
@@ -169,3 +183,33 @@ void *calloc(size_t nmemb, size_t size)
     }
     return (ptr);
 }
+/*
+void *realloc(void *ptr, size_t size)
+{
+    block_t *new_block = first;
+    block_t *ptr_block = first;
+    void *new_ptr;
+    size_t index = 0;
+
+    if (!ptr)
+        return (NULL);
+    size = size % 2;
+    new_ptr = malloc(size);
+    if (!new_ptr)
+        return (NULL);
+    while (new_block && new_block->allocated != new_ptr)
+        new_block = new_block->next;
+    if (!new_block)
+        return (NULL);
+    while (ptr_block && ptr_block->allocated != ptr)
+        ptr_block = ptr_block->next;
+    if (!ptr_block)
+        return (NULL);
+    while (index < ptr_block->size && index < new_block->size) {
+        new_block->allocated[index] = ptr_block->allocated[index];
+        index++;
+    }
+    free(ptr);
+    return (new_block->allocated);
+}
+*/
