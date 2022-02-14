@@ -12,6 +12,7 @@
 static block_t *first = NULL;
 
 void my_putnbr(int fd, int nbr);
+void my_putstr(int fd, char *str);
 
 size_t size_to_get(size_t s)
 {
@@ -116,8 +117,7 @@ void draw_memory()
 {
     block_t *tmp = first;
     size_t i = 0;
-
-    /*
+/*
     my_putstr(1, "Print Memory :\n");
     while (tmp) {
         my_putstr(1, "\t");
@@ -127,7 +127,11 @@ void draw_memory()
         my_putstr(1, ", position memory : ");
         my_putnbr(1, tmp->allocated);
         my_putstr(1, " -> difference : ");
-        my_putnbr(1, tmp->allocated - (void *)tmp);
+        my_putnbr(1, tmp->allocated - (char *)tmp);
+        if (tmp->next) {
+            my_putstr(1, " && ");
+            my_putnbr(1, (char *)tmp->next - tmp->allocated);
+        }
         my_putstr(1, " | size : ");
         my_putnbr(1, tmp->size);
         if (tmp->free) {
@@ -183,33 +187,36 @@ void *calloc(size_t nmemb, size_t size)
     }
     return (ptr);
 }
-/*
+
 void *realloc(void *ptr, size_t size)
 {
+    block_t *tmp = first;
     block_t *new_block = first;
-    block_t *ptr_block = first;
-    void *new_ptr;
-    size_t index = 0;
+    char *value1;
+    char *value2;
+    void *nptr;
 
-    if (!ptr)
-        return (NULL);
-    size = size % 2;
-    new_ptr = malloc(size);
-    if (!new_ptr)
-        return (NULL);
-    while (new_block && new_block->allocated != new_ptr)
-        new_block = new_block->next;
-    if (!new_block)
-        return (NULL);
-    while (ptr_block && ptr_block->allocated != ptr)
-        ptr_block = ptr_block->next;
-    if (!ptr_block)
-        return (NULL);
-    while (index < ptr_block->size && index < new_block->size) {
-        new_block->allocated[index] = ptr_block->allocated[index];
-        index++;
+    if (!ptr) {
+        return (malloc(size));
     }
+    while (tmp && tmp->allocated != ptr) {
+        tmp = tmp->next;
+    }
+    if (!tmp)
+        return (NULL);
+    if (ptr && size == 0) {
+        free(ptr);
+        return (NULL);
+    }
+    nptr = malloc(size);
+    while (new_block && new_block->allocated != nptr)
+        new_block = new_block->next;
+    value1 = new_block->allocated;
+    value2 = tmp->allocated;
+    for (size_t index = 0; index < new_block->size && index < tmp->size; index++) {
+        value1[index] = value2[index];
+    }
+    new_block->allocated = value1;
     free(ptr);
     return (new_block->allocated);
 }
-*/
