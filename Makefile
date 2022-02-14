@@ -7,8 +7,15 @@
 
 NAME	=	libmy_malloc.so
 
-SOURCE	=	lib/malloc.c 		\
-			lib/my_putnbr.c 	\
+SOURCE	=	lib/malloc.c 				\
+			lib/first_and_end_block.c 	\
+			lib/calloc.c 				\
+			lib/create_block.c 			\
+			lib/find_free_space.c 		\
+			lib/free.c 					\
+			lib/realloc.c 				\
+			lib/set_free_block.c 		\
+			lib/my_putnbr.c 			\
 
 OBJECT	=	$(SOURCE:.c=.o)
 
