@@ -7,7 +7,8 @@
 
 NAME	=	libmy_malloc.so
 
-SOURCE	=	lib/malloc.c 	\
+SOURCE	=	lib/malloc.c 		\
+			lib/my_putnbr.c 	\
 
 OBJECT	=	$(SOURCE:.c=.o)
 
