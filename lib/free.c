@@ -28,8 +28,14 @@ void merge_free_space(void)
             tmp = tmp->next;
         }
     }
-    while (tmp && tmp->free && tmp->size + sizeof(block_t) >= getpagesize() * 2) {
-        tmp->size -= getpagesize() * 2;
+    while (tmp && tmp->free && tmp->size + sizeof(block_t) >=
+        getpagesize() * 2) {
+        if (tmp->size + sizeof(block_t) == getpagesize() * 2) {
+            tmp->prev->next = NULL;
+            tmp = NULL;
+        } else {
+            tmp->size -= getpagesize() * 2;
+        }
         ptr = sbrk(-(getpagesize() * 2));
         if (ptr == (void *)-1)
             return;
@@ -48,5 +54,4 @@ void free(void *ptr)
         tmp->free = true;
     }
     merge_free_space();
-    //draw_memory();
 }
