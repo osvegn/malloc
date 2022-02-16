@@ -3,3 +3,4 @@ run.sh
 *.o
 *.so
 a.out
+my_putnbr.c
