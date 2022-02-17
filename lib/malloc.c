@@ -22,7 +22,7 @@ void *malloc(size_t size)
         block = create_first_block(size);
         return (block->allocated);
     }
-    block = find_free_space(size);
+    //block = find_free_space(size);
     if (!block) {
         block = create_new_block(size);
         if (!block)
