@@ -14,6 +14,23 @@ void set_next_prev(block_t *tmp)
         tmp->next->next->prev = tmp;
 }
 
+block_t *create_empty_block(void)
+{
+    block_t *block;
+    void *ptr = sbrk(getpagesize() * 2);
+
+    if (ptr == (void *)-1)
+        return (NULL);
+    block = ptr;
+    block->free = true;
+    block->next = NULL;
+    block->prev = NULL;
+    block->size = getpagesize() * 2 - sizeof(block_t);
+    block->allocated = ptr + sizeof(block_t);
+    set_first_block(block);
+    return (block);
+}
+
 void merge_free_space(void)
 {
     block_t *tmp = get_first_block();
@@ -24,23 +41,24 @@ void merge_free_space(void)
             tmp->size += tmp->next->size + sizeof(block_t);
             set_next_prev(tmp);
             tmp->next = tmp->next->next;
-        } else {
+        } else
             tmp = tmp->next;
-        }
     }
     while (tmp && tmp->free && tmp->size + sizeof(block_t) >=
         getpagesize() * 2) {
         if (tmp->size + sizeof(block_t) == getpagesize() * 2) {
-            tmp->prev->next = NULL;
+            if (tmp->prev)
+                tmp->prev->next = NULL;
             tmp = NULL;
-        } else {
+        } else
             tmp->size -= getpagesize() * 2;
-        }
         ptr = sbrk(-(getpagesize() * 2));
         if (ptr == (void *)-1)
             return;
-        if (sbrk(0) == get_first_block())
+        if (sbrk(0) == get_first_block()) {
+            create_empty_block();
             return;
+        }
     }
 }
 
