@@ -15,6 +15,7 @@ SOURCE	=	lib/malloc.c 				\
 			lib/free.c 					\
 			lib/realloc.c 				\
 			lib/set_free_block.c 		\
+			lib/reallocarray.c 			\
 
 OBJECT	=	$(SOURCE:.c=.o)
 
