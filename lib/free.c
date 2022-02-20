@@ -14,21 +14,31 @@ void set_next_prev(block_t *tmp)
         tmp->next->next->prev = tmp;
 }
 
-block_t *create_empty_block(void)
+void set_prev_next(block_t *tmp)
 {
-    block_t *block;
-    void *ptr = sbrk(getpagesize() * 2);
+    if (tmp->prev)
+        tmp->prev->next = NULL;
+}
 
-    if (ptr == (void *)-1)
-        return (NULL);
-    block = ptr;
-    block->free = true;
-    block->next = NULL;
-    block->prev = NULL;
-    block->size = getpagesize() * 2 - sizeof(block_t);
-    block->allocated = ptr + sizeof(block_t);
-    set_first_block(block);
-    return (block);
+void move_break_point(block_t *tmp)
+{
+    void *ptr = NULL;
+
+    while (tmp && tmp->free && tmp->size + sizeof(block_t) >=
+        getpagesize() * 2) {
+        if (tmp->size + sizeof(block_t) == getpagesize() * 2) {
+            set_prev_next(tmp);
+            tmp = NULL;
+        } else
+            tmp->size -= getpagesize() * 2;
+        ptr = sbrk(-(getpagesize() * 2));
+        if (ptr == (void *)-1)
+            return;
+        if (sbrk(0) == get_first_block()) {
+            create_empty_block();
+            return;
+        }
+    }
 }
 
 void merge_free_space(void)
@@ -44,22 +54,7 @@ void merge_free_space(void)
         } else
             tmp = tmp->next;
     }
-    while (tmp && tmp->free && tmp->size + sizeof(block_t) >=
-        getpagesize() * 2) {
-        if (tmp->size + sizeof(block_t) == getpagesize() * 2) {
-            if (tmp->prev)
-                tmp->prev->next = NULL;
-            tmp = NULL;
-        } else
-            tmp->size -= getpagesize() * 2;
-        ptr = sbrk(-(getpagesize() * 2));
-        if (ptr == (void *)-1)
-            return;
-        if (sbrk(0) == get_first_block()) {
-            create_empty_block();
-            return;
-        }
-    }
+    move_break_point(tmp);
 }
 
 void free(void *ptr)

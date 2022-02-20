@@ -51,3 +51,20 @@ block_t *create_new_block(size_t size)
     block->next = set_free_block(block, real_size);
     return (block);
 }
+
+block_t *create_empty_block(void)
+{
+    block_t *block;
+    void *ptr = sbrk(getpagesize() * 2);
+
+    if (ptr == (void *)-1)
+        return (NULL);
+    block = ptr;
+    block->free = true;
+    block->next = NULL;
+    block->prev = NULL;
+    block->size = getpagesize() * 2 - sizeof(block_t);
+    block->allocated = ptr + sizeof(block_t);
+    set_first_block(block);
+    return (block);
+}

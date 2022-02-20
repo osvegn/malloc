@@ -35,3 +35,4 @@ block_t *set_free_block(block_t *block, size_t real_size);
 
 block_t *create_first_block(size_t size);
 block_t *create_new_block(size_t size);
+block_t *create_empty_block(void);
