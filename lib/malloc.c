@@ -7,11 +7,10 @@
 
 #include "lib_malloc.h"
 #include <unistd.h>
-#include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
 
-void *malloc(size_t size)
+void *my_malloc(size_t size)
 {
     block_t *block = NULL;
     size_t i = 0;
@@ -29,4 +28,15 @@ void *malloc(size_t size)
             return (NULL);
     }
     return (block->allocated);
+}
+
+void *malloc(size_t size)
+{
+    void *ptr = NULL;
+    pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+
+    pthread_mutex_lock(&mut);
+    ptr = my_malloc(size);
+    pthread_mutex_unlock(&mut);
+    return (ptr);
 }
