@@ -7,6 +7,7 @@
 
 #include "lib_malloc.h"
 #include <unistd.h>
+#include <pthread.h>
 
 void set_next_prev(block_t *tmp)
 {
@@ -60,11 +61,14 @@ void merge_free_space(void)
 void free(void *ptr)
 {
     block_t *tmp = get_first_block();
+    pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
+    pthread_mutex_lock(&mut);
     while (tmp->allocated != ptr && tmp->next)
         tmp = tmp->next;
     if (tmp->allocated == ptr) {
         tmp->free = true;
     }
     merge_free_space();
+    pthread_mutex_unlock(&mut);
 }
